@@ -1,58 +1,74 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
+# Node/JavaScript/TypeScript
+node_modules/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+build/
+.out/
+.next/
+.nuxt/
+.cache/
+.turbo/
+*.tsbuildinfo
 
-# Machine Learning
-*.h5
-*.pickle
-*.model
-*.pkl
-*.joblib
-*.parquet
-*.feather
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env*.local
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*.sublime-workspace
+*.sublime-project
 
-# Environment
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+# Editor
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# Jupyter
-.ipynb_checkpoints
-*.ipynb
+# Testing
+coverage/
+.nyc_output/
+jest.config.js
+.vitest/
+
+# Package managers
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+
+# TypeScript
+*.js.map
+*.d.ts
+*.d.ts.map
+
+# Build tools
+.eslintcache
+*.min.js
+*.min.css
 
 # Cline
 .clinerules
 memory-bank/
 
-# MCP
-node_modules/
-build/
+# Misc
+*.bak
+*.tmp
+*.patch
