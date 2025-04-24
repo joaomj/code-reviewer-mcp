@@ -67,4 +67,4 @@ Since MCP servers communicate over stdio, debugging can be challenging. We recom
 npm run inspector
 ```
 
-The Inspector will provide a URL to access debugging tools in your browser.
+The Inspector will provide a URL to access debugging tools in your browser
