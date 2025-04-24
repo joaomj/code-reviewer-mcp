@@ -1,70 +1,99 @@
-# code-reviewer-mcp MCP Server
+# Code Reviewer MCP Server
 
-A Model Context Protocol server
+A GitHub Pull Request Code Review server using Model Context Protocol
 
-This is a TypeScript-based MCP server that implements a simple notes system. It demonstrates core MCP concepts by providing:
-
-- Resources representing text notes with URIs and metadata
-- Tools for creating new notes
-- Prompts for generating summaries of notes
+This MCP server provides automated code review capabilities for GitHub pull requests by integrating with OpenRouter's AI models.
 
 ## Features
 
-### Resources
-- List and access notes via `note://` URIs
-- Each note has a title, content and metadata
-- Plain text mime type for simple content access
+- Automated code reviews for GitHub pull requests
+- Detailed feedback on code quality, style and potential issues
+- Integration with OpenRouter's AI models (currently using Gemini 2.5 Pro)
+- Comprehensive logging for debugging
 
-### Tools
-- `create_note` - Create new text notes
-  - Takes title and content as required parameters
-  - Stores note in server state
+## Current Limitations
 
-### Prompts
-- `summarize_notes` - Generate a summary of all stored notes
-  - Includes all note contents as embedded resources
-  - Returns structured prompt for LLM summarization
+⚠️ **Important**: Currently this server only works with:
+- Public GitHub repositories
+- Open pull requests (not draft PRs)
 
-## Development
+## Installation
 
-Install dependencies:
+1. Clone this repository:
+```bash
+git clone https://github.com/joaomj/code-reviewer-mcp.git
+cd code-reviewer-mcp
+```
+
+2. Install dependencies:
 ```bash
 npm install
 ```
 
-Build the server:
+3. Set required environment variables:
+```bash
+export GITHUB_PAT=your_github_personal_access_token
+export OPENROUTER_API_KEY=your_openrouter_api_key
+```
+
+4. Build the server:
 ```bash
 npm run build
 ```
+
+## Usage
+
+To start the MCP server:
+```bash
+node build/index.js
+```
+
+The server will be available to any MCP-compatible client (like Claude Desktop).
+
+## Configuration
+
+Add to your MCP client configuration:
+
+```json
+{
+  "mcpServers": {
+    "code-reviewer-mcp": {
+      "command": "node",
+      "args": ["/path/to/code-reviewer-mcp/build/index.js"],
+      "env": {
+        "GITHUB_PAT": "your_github_token",
+        "OPENROUTER_API_KEY": "your_openrouter_key"
+      }
+    }
+  }
+}
+```
+
+## Development
 
 For development with auto-rebuild:
 ```bash
 npm run watch
 ```
 
-## Installation
-
-To use with Claude Desktop, add the server config:
-
-On MacOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
-
-```json
-{
-  "mcpServers": {
-    "code-reviewer-mcp": {
-      "command": "/path/to/code-reviewer-mcp/build/index.js"
-    }
-  }
-}
+To run tests:
+```bash
+npm test
 ```
 
-### Debugging
+## Debugging
 
-Since MCP servers communicate over stdio, debugging can be challenging. We recommend using the [MCP Inspector](https://github.com/modelcontextprotocol/inspector), which is available as a package script:
+Use the built-in logging which outputs to stderr with detailed information about:
+- GitHub API requests
+- OpenRouter API calls
+- Processing steps
+- Any errors encountered
 
+For more advanced debugging, use the MCP Inspector:
 ```bash
 npm run inspector
 ```
 
-The Inspector will provide a URL to access debugging tools in your browser
+## Contributing
+
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.

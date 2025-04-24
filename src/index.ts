@@ -110,15 +110,42 @@ class CodeReviewerServer {
       }
 
       try {
-        // Get PR diff
-        const { data: diff } = await this.octokit.pulls.get({
-          owner,
-          repo,
-          pull_number,
-          mediaType: {
-            format: "diff"
+        // Get PR diff with enhanced error handling
+        console.error('[Debug] Fetching PR diff from GitHub');
+        let diff: string;
+        try {
+          const { data } = await this.octokit.pulls.get({
+            owner,
+            repo,
+            pull_number,
+            mediaType: {
+              format: "diff"
+            }
+          });
+          
+          if (typeof data !== 'string' || !data) {
+            console.error('[Error] Invalid diff format received from GitHub');
+            throw new Error('Received invalid diff format from GitHub API');
           }
-        });
+          
+          // Handle private repo diffs differently
+          diff = data;
+          if (diff.includes('diff --git') && diff.length > 5000) {
+            console.error('[Info] Large diff detected, optimizing for OpenRouter');
+            diff = diff.split('\n')
+              .filter(line => line.startsWith('+') || line.startsWith('-'))
+              .join('\n')
+              .substring(0, 5000);
+          }
+        } catch (error: unknown) {
+          const githubError = error as {response?: {status?: number, headers?: any, data?: any}, message?: string};
+          console.error('[Error] GitHub API error:', {
+            status: githubError.response?.status,
+            headers: githubError.response?.headers,
+            data: githubError.response?.data
+          });
+          throw new Error(`GitHub API error: ${githubError.message || 'Unknown error'}`);
+        }
 
         // Prepare LLM prompt
         const prompt = `Please review the following GitHub pull request changes:
@@ -156,11 +183,22 @@ Provide a detailed code review with:
             }
           );
 
-          console.error('[Debug] OpenRouter API response:', JSON.stringify(response.data, null, 2));
+          console.error('[Debug] Full OpenRouter API response:', JSON.stringify({
+          status: response.status,
+          headers: response.headers,
+          data: response.data
+        }, null, 2));
 
-          if (!response.data?.choices?.[0]?.message?.content) {
-            throw new Error('Invalid response format from OpenRouter API');
-          }
+        if (!response.data?.choices?.[0]?.message?.content) {
+          console.error('[Error] Invalid OpenRouter response structure:', {
+            hasData: !!response.data,
+            hasChoices: !!response.data?.choices,
+            choicesLength: response.data?.choices?.length,
+            hasMessage: !!response.data?.choices?.[0]?.message,
+            hasContent: !!response.data?.choices?.[0]?.message?.content
+          });
+          throw new Error('Invalid response format from OpenRouter API');
+        }
 
           return {
             content: [{
