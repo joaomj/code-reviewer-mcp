@@ -94,6 +94,18 @@ For more advanced debugging, use the MCP Inspector:
 npm run inspector
 ```
 
+## Next Steps
+
+Planned improvements and features:
+
+- [ ] Support for private repositories
+- [ ] Draft pull request analysis
+- [ ] Customizable review templates
+- [ ] Support for multiple AI models (OpenAI, Claude, etc.)
+- [ ] File-specific feedback
+- [ ] Integration with GitHub Checks API
+- [ ] Rate limiting and caching
+
 ## Contributing
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+Pull requests are welcome. **For major changes, please open an issue first** to discuss what you would like to change.
