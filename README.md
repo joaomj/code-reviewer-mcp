@@ -11,10 +11,14 @@ This MCP server provides automated code review capabilities for GitHub pull requ
 - Integration with OpenRouter's AI models (currently using Gemini 2.5 Pro)
 - Comprehensive logging for debugging
 
+## Requirements
+
+-   A GitHub Personal Access Token (PAT) with `repo` scope for private repositories or `public_repo` scope for public repositories. This PAT is required to fetch pull request data.
+-   An OpenRouter API Key.
+
 ## Current Limitations
 
 ⚠️ **Important**: Currently this server only works with:
-- Public GitHub repositories
 - Open pull requests (not draft PRs)
 
 ## Installation
@@ -98,14 +102,12 @@ npm run inspector
 
 Planned improvements and features:
 
-- [ ] Support for private repositories
 - [ ] Draft pull request analysis
 - [ ] Customizable review templates
 - [ ] Support for multiple AI models (OpenAI, Claude, etc.)
 - [ ] File-specific feedback
-- [ ] Integration with GitHub Checks API
 - [ ] Rate limiting and caching
 
 ## Contributing
 
-Pull requests are welcome. **For major changes, please open an issue first** to discuss what you would like to change.
+Suggestions are welcome. **Please open an issue first** to discuss what you would like to change.
