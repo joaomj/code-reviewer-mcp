@@ -1,3 +1,8 @@
+# Cline
+.clinerules
+memory-bank/
+# context_summary.md
+
 # Node/JavaScript/TypeScript
 node_modules/
 dist/
@@ -64,9 +69,21 @@ bun.lockb
 *.min.js
 *.min.css
 
-# Cline
-.clinerules
-memory-bank/
+# Docker
+Dockerfile.lock
+#.dockerignore
+docker-compose.override.yml
+
+# Python
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+venv/
+.venv/
 
 # Misc
 *.bak
