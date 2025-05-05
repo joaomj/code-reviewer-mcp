@@ -2,6 +2,8 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -24,6 +26,7 @@ if (!OPENROUTER_API_KEY) {
 class CodeReviewerServer {
   private server: Server;
   private octokit: Octokit;
+  private githubMcpClient: Client;
 
   constructor() {
     this.server = new Server(
@@ -41,6 +44,8 @@ class CodeReviewerServer {
     this.octokit = new Octokit({
       auth: GITHUB_PAT,
     });
+
+    this.githubMcpClient = new Client(new StdioClientTransport());
 
     this.setupToolHandlers();
     
@@ -152,20 +157,23 @@ class CodeReviewerServer {
         
 ${diff}
 
-Provide a detailed code review with:
-1. Overall assessment of the changes
-2. Specific feedback on code quality, style, and potential issues
-3. Suggestions for improvements
-4. Any security concerns
-5. Performance considerations`;
+Provide a detailed code review. For each specific comment, include the file path and the line number(s) the comment applies to. Use the format \`FILE_PATH:LINE_NUMBER(S): COMMENT_TEXT\`. If a comment applies to multiple lines, use a range like \`LINE_START-LINE_END\`. If a comment applies to the entire file or is a general comment, use \`GENERAL: COMMENT_TEXT\`.
+
+Example:
+\`src/index.ts:10: This line needs adjustment.\`
+\`src/utils.ts:25-30: This block of code can be refactored.\`
+\`GENERAL: Overall, the changes look good.\`
+
+Ensure each comment is on a new line.`;
 
         // Call OpenRouter API with enhanced error handling
         console.error('[Debug] Sending request to OpenRouter API');
+        let llmResponseContent: string;
         try {
           const response = await axios.post(
             "https://openrouter.ai/api/v1/chat/completions",
             {
-              model: "google/gemini-2.5-pro-preview-03-25",
+              model: "google/gemini-2.5-pro-preview-03-25", // Or another suitable model
               messages: [
                 {
                   role: "user",
@@ -177,10 +185,11 @@ Provide a detailed code review with:
               headers: {
                 "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
                 "Content-Type": "application/json",
-                "HTTP-Referer": "https://github.com/joaomj/case_brasil_paralelo"
+                "HTTP-Referer": "https://github.com/joaomj/case_brasil_paralelo" // Replace with actual repo URL if needed
               },
-              timeout: 30000
+              timeout: 60000 // Increased timeout for potentially longer LLM responses
             }
+          }
           );
 
           console.error('[Debug] Full OpenRouter API response:', JSON.stringify({
@@ -200,12 +209,90 @@ Provide a detailed code review with:
           throw new Error('Invalid response format from OpenRouter API');
         }
 
-          return {
-            content: [{
-              type: "text",
-              text: response.data.choices[0].message.content
-            }]
-          };
+          llmResponseContent = response.data.choices[0].message.content;
+
+          // Parse LLM response and format for GitHub comments
+          const comments: { path: string; position?: number; line?: number; start_line?: number; body: string; side?: 'LEFT' | 'RIGHT'; start_side?: 'LEFT' | 'RIGHT' }[] = [];
+          const lines = llmResponseContent.split('\n');
+
+          let generalCommentBody = '';
+
+          for (const line of lines) {
+              const commentMatch = line.match(/^([^:]+):([^:]+):(.*)$/);
+              if (commentMatch) {
+                  const filePath = commentMatch[1].trim();
+                  const lineNumberInfo = commentMatch[2].trim();
+                  const commentText = commentMatch[3].trim();
+
+                  if (filePath === 'GENERAL') {
+                      generalCommentBody += commentText + '\n';
+                  } else {
+                      // Attempt to parse line number(s)
+                      const rangeMatch = lineNumberInfo.match(/^(\d+)-(\d+)$/);
+                      const singleLineMatch = lineNumberInfo.match(/^(\d+)$/);
+
+                      if (rangeMatch) {
+                          const startLine = parseInt(rangeMatch[1], 10);
+                          const endLine = parseInt(rangeMatch[2], 10);
+                          // For multi-line comments, GitHub API uses start_line and line
+                          comments.push({
+                              path: filePath,
+                              body: commentText,
+                              start_line: startLine,
+                              line: endLine,
+                              side: 'RIGHT', // Assuming comments are on the new code (RIGHT side of diff)
+                              start_side: 'RIGHT' // Assuming comments are on the new code (RIGHT side of diff)
+                          });
+                      } else if (singleLineMatch) {
+                          const lineNumber = parseInt(singleLineMatch[1], 10);
+                           // For single-line comments, GitHub API uses line and position (relative to diff)
+                           // We don't have position here, so we'll use line. GitHub might infer position.
+                          comments.push({
+                              path: filePath,
+                              body: commentText,
+                              line: lineNumber,
+                              side: 'RIGHT' // Assuming comments are on the new code (RIGHT side of diff)
+                          });
+                      } else {
+                          console.error(`[Warning] Could not parse line number info: ${lineNumberInfo} for file ${filePath}`);
+                          // If line number parsing fails, add as a general comment
+                          generalCommentBody += `File: ${filePath}, Line Info: ${lineNumberInfo}: ${commentText}\n`;
+                      }
+                  }
+              } else {
+                  // If the line doesn't match the expected format, treat it as part of a general comment
+                  generalCommentBody += line + '\n';
+              }
+          }
+
+          // Post review comments to GitHub
+          console.error('[Debug] Posting review comments to GitHub');
+          try {
+              // Use the github-mcp tool to create a pull request review
+              const reviewBody = generalCommentBody.trim() || 'Automated code review';
+              await this.githubMcpClient.callTool('github-mcp', 'create_pull_request_review', {
+                  owner,
+                  repo,
+                  pullNumber: pull_number,
+                  event: 'COMMENT', // Or 'REQUEST_CHANGES' if appropriate
+                  body: reviewBody,
+                  comments: comments
+              });
+
+               return {
+                content: [{
+                  type: "text",
+                  text: `Code review completed and comments posted to GitHub PR #${pull_number}.`
+                }]
+              };
+
+
+          } catch (githubPostError) {
+              console.error('[Error] Failed to post review comments to GitHub:', githubPostError);
+              throw new Error(`Failed to post review comments to GitHub: ${githubPostError instanceof Error ? githubPostError.message : 'Unknown error'}`);
+          }
+
+
         } catch (apiError) {
           console.error('[Debug] OpenRouter API error:', apiError);
           throw apiError;
